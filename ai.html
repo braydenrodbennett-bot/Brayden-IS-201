@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Crux | Gym Edition</title>
+    <style>
+        :root {
+            /* Sunny Sky */
+            --sky-top: #4db8ff;
+            --sky-bottom: #e0f6ff;
+            --wall-color: #8B7355; 
+            --accent-color: #ff7b00;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+        }
+
+        .ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .home-btn {
+            pointer-events: auto;
+            color: #fff;
+            text-decoration: none;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            transition: background 0.2s;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .home-btn:hover { background: rgba(0, 0, 0, 0.8); }
+
+        .score-board {
+            text-align: right;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .score-board h2 { margin: 0; font-size: 2rem; color: var(--accent-color); }
+        .score-board p { margin: 0; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; color: #666;}
+
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            pointer-events: auto;
+            border-bottom: 4px solid var(--accent-color);
+            z-index: 20;
+        }
+
+        .menu h1 { color: var(--accent-color); margin-top: 0; text-transform: uppercase; letter-spacing: 1px;}
+        .menu p { margin-bottom: 20px; color: #555;}
+
+        button.play-btn {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        button.play-btn:hover { transform: scale(1.05); }
+        button.play-btn:active { transform: scale(0.95); }
+
+        .hidden { display: none !important; }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 40px rgba(0,0,0,0.4);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="ui-container">
+        <a href="index.html" class="home-btn">← Return to Home</a>
+        <div class="score-board">
+            <p>Moves</p>
+            <h2 id="scoreDisplay">0</h2>
+        </div>
+    </div>
+
+    <div id="menu" class="menu">
+        <h1 id="menuTitle">The Crux</h1>
+        <p id="menuDesc">Tap Left/Right or use Arrow Keys.<br>Grab the next gym hold before you pump out!</p>
+        <button id="startBtn" class="play-btn">Climb On</button>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const menuTitle = document.getElementById('menuTitle');
+        const menuDesc = document.getElementById('menuDesc');
+        const startBtn = document.getElementById('startBtn');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+
+        // Game Logic Config (From V1)
+        const WALL_WIDTH = 400;
+        const HOLD_SPACING = 120;
+        let score = 0;
+        let stamina = 100;
+        let isPlaying = false;
+        let holds = [];
+        let animationId;
+        
+        // Gym Colors
+        const gymColors = ['#FF1493', '#32CD32', '#FFD700', '#9400D3', '#00BFFF', '#FF4500'];
+
+        // Climber Object
+        const climber = {
+            side: 0, 
+            y: canvas.innerHeight - 200,
+            renderX: 0,
+            renderY: 0,
+            targetX: 0,
+            targetY: 0
+        };
+
+        function resizeCanvas() {
+            canvas.width = Math.min(window.innerWidth, WALL_WIDTH);
+            canvas.height = window.innerHeight;
+            if(!isPlaying) {
+                climber.y = canvas.height - 200;
+                climber.targetY = climber.y;
+                climber.renderY = climber.y;
+            }
+        }
+
+        function generateHolds(count) {
+            for(let i = 0; i < count; i++) {
+                const side = Math.random() > 0.5 ? 1 : -1;
+                const y = holds.length > 0 ? holds[holds.length - 1].y - HOLD_SPACING : canvas.height - 200;
+                
+                // Randomize hold appearance
+                const color = gymColors[Math.floor(Math.random() * gymColors.length)];
+                const type = Math.floor(Math.random() * 3); // 3 different shape types
+                
+                holds.push({ side, y, color, type });
+            }
+        }
+
+        function initGame() {
+            score = 0;
+            stamina = 100;
+            holds = [];
+            scoreDisplay.innerText = score;
+            
+            generateHolds(10);
+            
+            // Set climber to first hold
+            climber.side = holds[0].side;
+            climber.targetY = holds[0].y + 20; // Hang slightly below hold
+            climber.targetX = canvas.width / 2 + (climber.side * 80);
+            climber.renderX = climber.targetX;
+            climber.renderY = climber.targetY;
+            
+            holds.shift(); 
+            generateHolds(1);
+
+            isPlaying = true;
+            menu.classList.add('hidden');
+            gameLoop();
+        }
+
+        function gameOver(reason) {
+            isPlaying = false;
+            cancelAnimationFrame(animationId);
+            menuTitle.innerText = "Falling!";
+            menuDesc.innerHTML = `${reason}<br><br>Total Moves: <b>${score}</b>`;
+            startBtn.innerText = "Try Again";
+            menu.classList.remove('hidden');
+        }
+
+        function moveClimber(inputSide) {
+            if (!isPlaying) return;
+            const nextHold = holds[0];
+
+            if (inputSide === nextHold.side) {
+                score++;
+                scoreDisplay.innerText = score;
+                stamina = Math.min(100, stamina + Math.max(5, 15 - (score * 0.1))); 
+                
+                climber.side = inputSide;
+                climber.targetX = canvas.width / 2 + (climber.side * 80);
+                
+                // Shift all holds down (arcade style)
+                holds.shift();
+                holds.forEach(h => h.y += HOLD_SPACING);
+                
+                // Jump climber down visually so they animate back up to the target
+                climber.renderY += HOLD_SPACING; 
+                
+                generateHolds(1);
+            } else {
+                gameOver("You jumped the wrong way!");
+            }
+        }
+
+        function drawWall() {
+            ctx.fillStyle = '#8B7355'; // Rock brown
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle vertical climbing wall lines
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 2;
+            for(let i=0; i<canvas.width; i+=40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Center Line
+            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+        }
+
+        function drawGymHold(x, y, color, type, isNext) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            
+            // 3 different styles of gym holds
+            if (type === 0) {
+                // Round Jug
+                ctx.arc(x, y, 18, 0, Math.PI * 2);
+            } else if (type === 1) {
+                // Angular Crimp
+                ctx.moveTo(x - 20, y + 10);
+                ctx.lineTo(x + 15, y - 15);
+                ctx.lineTo(x + 20, y + 15);
+            } else {
+                // Oval Pinch
+                ctx.ellipse(x, y, 15, 25, Math.PI / 4, 0, Math.PI * 2);
+            }
+            ctx.fill();
+
+            // Highlight the next hold the user needs to hit
+            if (isNext) {
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.shadowColor = 'white';
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+                ctx.shadowBlur = 0; // reset
+            }
+            
+            // Add a little shadow to make the hold pop
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.beginPath();
+            ctx.arc(x, y + 5, 8, 0, Math.PI);
+            ctx.fill();
+        }
+
+        function drawClimber() {
+            // Smooth animation (Lerping)
+            climber.renderX += (climber.targetX - climber.renderX) * 0.2;
+            climber.renderY += (climber.targetY - climber.renderY) * 0.2;
+
+            ctx.save();
+            ctx.translate(climber.renderX, climber.renderY);
+
+            // Left/Right Arm targeting
+            const armReach = climber.side === -1 ? -25 : 25;
+
+            // Draw Arms
+            ctx.strokeStyle = '#fca3b7'; // Skin color
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            // Reaching arm
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(armReach, -30); ctx.stroke();
+            // Lower resting arm
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-armReach, 10); ctx.stroke();
+
+            // Draw Legs
+            ctx.strokeStyle = '#333'; // Pants
+            ctx.beginPath(); ctx.moveTo(-5, 20); ctx.lineTo(-15, 45); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(5, 20); ctx.lineTo(15, 40); ctx.stroke();
+
+            // Draw Body
+            ctx.fillStyle = '#0dcaf0'; // Blue shirt
+            ctx.beginPath(); ctx.roundRect(-12, -10, 24, 35, 8); ctx.fill();
+
+            // Draw Head
+            ctx.fillStyle = '#fca3b7';
+            ctx.beginPath(); ctx.arc(0, -20, 12, 0, Math.PI * 2); ctx.fill();
+            
+            // Helmet
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(0, -22, 13, Math.PI, 0); ctx.fill();
+
+            ctx.restore();
+        }
+
+        function draw() {
+            drawWall();
+
+            // Draw Holds
+            holds.forEach((hold, index) => {
+                const x = canvas.width / 2 + (hold.side * 80);
+                drawGymHold(x, hold.y, hold.color, hold.type, index === 0);
+            });
+
+            drawClimber();
+
+            // Draw Stamina Bar
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(20, canvas.height - 40, canvas.width - 40, 20);
+            
+            const r = Math.max(0, 255 - (stamina * 2.5));
+            const g = Math.min(255, stamina * 2.5);
+            ctx.fillStyle = `rgb(${r}, ${g}, 0)`;
+            ctx.fillRect(22, canvas.height - 38, (canvas.width - 44) * (stamina / 100), 16);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText("PUMP METER", 25, canvas.height - 26);
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            const drainRate = 0.2 + (score * 0.005);
+            stamina -= drainRate;
+
+            if (stamina <= 0) {
+                gameOver("You pumped out!");
+                return;
+            }
+
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Controls
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a') moveClimber(-1);
+            if (e.key === 'ArrowRight' || e.key === 'd') moveClimber(1);
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            if (clickX < canvas.width / 2) moveClimber(-1);
+            else moveClimber(1);
+        });
+
+        startBtn.addEventListener('click', initGame);
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Initial setup
+        resizeCanvas();
+        drawWall();
+    </script>
+</body>
+</html>

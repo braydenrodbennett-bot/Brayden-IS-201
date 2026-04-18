@@ -1,0 +1,103 @@
+/* Custom Stylesheet for Rock Climbing Scratch Page */
+
+body {
+    background-color: #1a1a1a; /* Custom dark background color */
+    color: #e0e0e0;           /* Font color: Light gray for readability */
+    font-family: 'Segoe UI', Tahoma, sans-serif; /* Custom font family */
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* Div Block 1: Main Content Container */
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Div Block 2: General content blocks for positioning */
+.content-block {
+    max-width: 800px;
+    margin: 40px auto;
+    padding: 30px;
+    background-color: #2d2d2d;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+}
+
+/* Div Block 3: Specialized styling for media sections */
+/* Div Block 3: Specialized styling for media sections */
+.media-section {
+    max-width: 1050px; /* Increased from 800px to give the graph room */
+    border-left: 5px solid #ffa500; /* Accent border color */
+}
+
+/* Force the Tableau container to behave */
+#tableau-viz {
+    width: 100%;
+    overflow-x: auto; /* Adds a horizontal scrollbar if the screen is too narrow */
+    overflow-y: hidden;
+    background-color: #fff; /* Blends the edges cleanly */
+    padding-bottom: 10px;
+}
+
+h1, h2 {
+    color: #ffa500; /* Font color: Climbing-inspired orange */
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.bg-accent {
+    background-color: #252a34; /* Slightly different background for lists */
+}
+
+.hero-img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    display: block;
+}
+
+nav a {
+    color: #4db8ff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+.video-container {
+    background: #000;
+    padding: 10px;
+    margin-bottom: 20px;
+    text-align: center; /* Centers the video just in case */
+}
+
+/* This targets the actual YouTube video inside the container */
+.video-container iframe {
+    width: 100%;          /* Makes the video stretch to fill the width */
+    aspect-ratio: 16 / 9; /* Keeps the perfect YouTube widescreen proportions */
+    height: auto;         /* Prevents it from looking squished */
+}
+
+footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 0.8rem;
+    color: #888;
+}
+/* Full-Width Edge-to-Edge Banner */
+.hero-banner {
+    width: 100%;
+    height: 55vh; /* Takes up 55% of the screen height */
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* This adds that awesome parallax scrolling effect! */
+    border-top: 3px solid #ffa500;
+    border-bottom: 3px solid #ffa500;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    margin: 0 0 40px 0;
+}
