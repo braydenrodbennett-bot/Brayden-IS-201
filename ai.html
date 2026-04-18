@@ -62,6 +62,14 @@
 
         .score-board h2 { margin: 0; font-size: 2rem; color: var(--accent-color); }
         .score-board p { margin: 0; font-size: 0.8rem; text-transform: uppercase; font-weight: bold; color: #666;}
+        
+        .high-score-text {
+            font-size: 0.7rem !important;
+            color: #999 !important;
+            margin-bottom: 5px !important;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
 
         .menu {
             position: absolute;
@@ -110,6 +118,7 @@
     <div class="ui-container">
         <a href="index.html" class="home-btn">← Return to Home</a>
         <div class="score-board">
+            <p class="high-score-text">High Score: <span id="topHighScoreDisplay">0</span></p>
             <p>Moves</p>
             <h2 id="scoreDisplay">0</h2>
         </div>
@@ -131,6 +140,7 @@
         const menuDesc = document.getElementById('menuDesc');
         const startBtn = document.getElementById('startBtn');
         const scoreDisplay = document.getElementById('scoreDisplay');
+        const topHighScoreDisplay = document.getElementById('topHighScoreDisplay');
 
         // Game Logic Config (From V1)
         const WALL_WIDTH = 400;
@@ -140,6 +150,10 @@
         let isPlaying = false;
         let holds = [];
         let animationId;
+        
+        // High Score Logic (Loads from local storage so it saves between refreshes)
+        let highScore = localStorage.getItem('cruxHighScore') ? parseInt(localStorage.getItem('cruxHighScore')) : 0;
+        topHighScoreDisplay.innerText = highScore;
         
         // Gym Colors
         const gymColors = ['#FF1493', '#32CD32', '#FFD700', '#9400D3', '#00BFFF', '#FF4500'];
@@ -203,8 +217,28 @@
         function gameOver(reason) {
             isPlaying = false;
             cancelAnimationFrame(animationId);
+            
+            // Check and set high score
+            let isNewRecord = false;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('cruxHighScore', highScore);
+                topHighScoreDisplay.innerText = highScore;
+                isNewRecord = true;
+            }
+
             menuTitle.innerText = "Falling!";
-            menuDesc.innerHTML = `${reason}<br><br>Total Moves: <b>${score}</b>`;
+            
+            // Format the game over text
+            let resultText = `${reason}<br><br>Total Moves: <b>${score}</b><br>`;
+            
+            if (isNewRecord) {
+                resultText += `<span style="color: #FF1493; font-weight: bold; font-size: 1.1rem;">★ NEW HIGH SCORE! ★</span>`;
+            } else {
+                resultText += `High Score: <b>${highScore}</b>`;
+            }
+            
+            menuDesc.innerHTML = resultText;
             startBtn.innerText = "Try Again";
             menu.classList.remove('hidden');
         }
